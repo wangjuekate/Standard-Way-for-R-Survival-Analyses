@@ -1,0 +1,111 @@
+
+#construct the survival object with the starting and ending time
+#add survival time
+timeaddon<-function(input){
+  time<-seq(1,nrow(input))
+  time<-paste(time,collapse= ",")
+  return(time)
+}
+results<-ddply(panel,.(ID),timeaddon)
+monthpast<-unlist(strsplit(results[,2],","))
+panel$monthpast<-as.numeric(as.matrix(monthpast))
+#starting time
+panel$tstart<-panel$monthpast-1
+#do the ordering for later event cut off
+panel<-panel[order(panel$ID,panel$monthpast),]
+
+#R does not censor for you, you have to cut the data when the event ends
+#code for cutting the data
+
+
+addup<-function(input,names){
+    matrixm<-matrix(0,nrow=nrow(input),ncol = nrow(input))
+    matrixm<-upper.tri(matrixm, diag = FALSE)
+    add1<-which(names=="S333_grant")
+    results<- as.numeric(as.matrix(input[,add1]))%*%matrixm
+    results<-paste(results,collapse=",")
+
+    return(results)
+}
+
+results<-ddply(panel,.(ID),addup,colnames(panel))
+dropped<-as.numeric(unlist(strsplit(unlist(results$V1),",")))
+panel$dropped<-dropped
+panel14<-panel[which(panel$dropped==0),]
+
+#construct the survival object with starting and ending time
+
+surv_object<-Surv(panel14$tstart, panel14$monthpast,
+                  event =panel14$permit)
+                  
+                  
+#cox regression
+#option 1 cluster to adjust standard errors
+cluster = ?
+
+#option 2 add random effect
++frailty (ID)
+
+#option 3 add fixed effect
++as.factor()
+
+
+sec333 <-coxph(surv_object~
+               avg_ERC
+               +as.factor(year)   
+              +younger3year
+               +military,
+               data=panel14,cluster=ID)
+mm<-summary(sec333)
+
+
+#write up survival analyses model
+
+
+library(xtable)
+library(psych)
+
+cleardata<-function(input){
+input<-data.frame(input)
+names<-rownames(input)
+final<-matrix("",nrow=nrow(input)*2,ncol=2)
+j=1
+for(i in 1:nrow(input)){
+st<-paste("(",format(round(as.numeric(input[i,2]),2), nsmall = 2),")",sep="")
+if(!is.na(input[i,4])){
+if(as.numeric(input[i,4])<=0.001){
+coe<-paste(format(round(as.numeric(input[i,1]),2), nsmall = 2),"***",sep="")
+}
+if(as.numeric(input[i,4]<=0.01&as.numeric(input[i,4])>0.001 )){
+coe<-paste(format(round(as.numeric(input[i,1]),2), nsmall = 2),"**",sep="")
+}
+if(as.numeric(input[i,4]<=0.05&&as.numeric(input[i,4])>0.01)){
+coe<-paste(format(round(as.numeric(input[i,1]),2), nsmall = 2),"*",sep="")
+}
+if(as.numeric(input[i,4]<=0.1&&as.numeric(input[i,4])>0.05)){
+coe<-paste(format(round(as.numeric(input[i,1]),2), nsmall = 2),"+",sep="")
+}
+if(as.numeric(input[i,4])>0.1){
+coe<-format(round(as.numeric(input[i,1]),2), nsmall = 2)}
+}else{
+coe<-"NA"
+}
+final[j,1]<-names[i]
+final[j,2]<-coe
+final[j+1,2]<-st
+j<-j+2
+}
+return(final)
+}
+
+mm<-summary(sec333)
+#survival analyses
+print.xtable(xtable(
+rbind(data.frame(cleardata(mm$coefficients[,-2])),
+data.frame(cbind("Obs.",sum( mm$n))),
+data.frame(cbind("log lik.", round( 
+as.numeric(as.matrix(mm$loglik) ),digits=2) ))
+)
+)
+,type="html",file="sec333.html")
+
