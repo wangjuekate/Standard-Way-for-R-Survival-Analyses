@@ -1,0 +1,17 @@
+library(pastecs)
+library(psych)
+subset<-c("logcollectivegoal","avg_ERC","Lobby",
+          "age",
+          "diversify","military"
+         )
+
+mm<-describe(panel14[subset])
+mcor<-round(cor(panel14[subset]),2)
+mcor[upper.tri(mcor, diag=TRUE)]<-""
+write.table(mm,"summarystatistic.csv",sep=",",row.names=FALSE)
+write.table(mcor,"correlation.csv",sep=",",row.names=FALSE)
+#regression VIF
+install.packages("tidyverse")
+library(tidyverse)
+
+car::vif(results)
