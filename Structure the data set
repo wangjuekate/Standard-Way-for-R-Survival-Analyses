@@ -1,3 +1,16 @@
+#Load libraries
+library(dplyr)
+library(plyr)
+library(igraph)
+library(CINNA)
+library(pglm)
+library(survival)
+library(survminer)
+library(stargazer)
+
+# Set directory - file path and import .csv-file 
+setwd("/Users/jjw6286/Downloads/CPA_collaborationtypes")
+
 
 #construct the survival object with the starting and ending time
 #add survival time
